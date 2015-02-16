@@ -158,7 +158,10 @@ esgpublish [...] --map cmip5.output1.IPSL.IPSL-CM5A-LR.1pctCO2.yr.ocnBgchem.Oyr.
 
 To add a supported project, just add a new project section in your configuration file. The options prefix (called ```facetX``` in the following template) must have the same name as ```dataset_ID``` items and ```directory_format``` variables.
 
-The ```directory_format``` option defines the DRS of your project using a regex to match with your full files paths. Feel free to defined a new tree or file extension if necessary using all regex facilities.
+```dataset_ID``` items correspond to a sorted list of facets defining dataset master ID.
+
+The ```directory_format``` option defines the DRS of your project using a regex to match with your full files paths. Feel free to defined a new tree or file extension 
+if necessary using all regex facilities.
 
 Follow this template:
 
