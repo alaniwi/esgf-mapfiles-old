@@ -15,6 +15,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from argparse import RawTextHelpFormatter
 from lockfile import LockFile, LockTimeout
 from datetime import datetime
+from itertools import izip, repeat
 from tempfile import mkdtemp
 from shutil import copy2, rmtree
 
@@ -81,7 +82,7 @@ def _get_args():
                         type = str,
                         nargs = '?',
                         const = os.getcwd(),
-                        help = """Logfile directory. If not, standard output is used.\n\n""")
+                        help = """Logfile directory (default is working directory).\nIf not, standard output is used.\n\n""")
     parser.add_argument('-m','--mapfile',
                         type = str,
                         default = 'mapfile.txt',
@@ -129,44 +130,49 @@ def _get_files(directory):
             yield os.path.join(root, file)
 
 
-def _get_master_ID(attributes):
+def _get_master_ID(attributes, config):
     """Returns master ID and version from dataset path."""
-    facets = ctx.cfg.get(attributes['project'].lower(), 'dataset_ID').replace(" ", "").split(',')
+    facets = config.get(attributes['project'].lower(), 'dataset_ID').replace(" ", "").split(',')
     master_ID = [attributes['project'].lower()]
     for facet in facets :
         master_ID.append(attributes[facet])
     return '.'.join(master_ID)
 
 
-def _get_options(section, facet):
+def _get_options(section, facet, config):
     """Get facet options of a section as list."""
-    return ctx.cfg.get(section, '{0}_options'.format(facet)).replace(" ", "").split(',')
+    return config.get(section, '{0}_options'.format(facet)).replace(" ", "").split(',')
 
 
-def _check_facets(attributes):
+def _check_facets(attributes, logdir, config):
     """Check all attribute regarding controlled vocabulary."""
     for facet in attributes.keys() :
         if not facet in ['project','filename','variable','root','version','ensemble'] :
-            options = _get_options(attributes['project'].lower(), facet)
+            options = _get_options(attributes['project'].lower(), facet, config)
             if not attributes[facet] in options :
-                if ctx.logdir:
+                if logdir:
                     logging.error('"{0}" not in "{1}_options". Skip file {2}'.format(attributes[facet], facet, file)) 
                 raise Exception('"{0}" not in "{1}_options". Skip file {2}'.format(attributes[facet], facet, file))
 
 
-def _checksum(file):
+def _checksum(file, logdir):
     """Do MD5 checksum by Shell"""
     # Here 'md5sum' from Unix filesystem is used avoiding python memory limits
     try:
         shell = os.popen("md5sum {0} | awk -F ' ' '{{ print $1 }}'".format(file), 'r')
         return shell.readline()[:-1]
     except:
-        if ctx.logdir:
+        if logdir:
             logging.error('Checksum failed for {0}'.format(file))
         raise Exception('Checksum failed for {0}'.format(file))
 
 
-def _process(file): 
+def _wrapper(args):
+    """Pool map pultiple arguments wrapper."""
+    return _process(*args)
+
+
+def _process(file, ctx): 
     """File processing."""
     # Matching file full path with corresponding project pattern
     try: 
@@ -182,12 +188,12 @@ def _process(file):
             logging.error('Matching failed for {0}'.format(file)) 
         raise Exception('Matching failed for {0}'.format(file))
     # Control vocabulary of each facet
-    _check_facets(attributes)
+    _check_facets(attributes, ctx.logdir, ctx.cfg)
     # Deduce master ID from fulle path
-    master_ID = _get_master_ID(attributes)
+    master_ID = _get_master_ID(attributes, ctx.cfg)
     (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(file)
     # Make the file checksum (MD5)
-    checksum = _checksum(file)
+    checksum = _checksum(file, ctx.logdir)
     # Build mapfile name if one per dataset, or not
     if ctx.dataset:
         outmap = '{0}.{1}'.format(master_ID, attributes['version'])
@@ -214,17 +220,15 @@ def _process(file):
     return outmap
 
 
-# Processing context initialization
-ctx = _ProcessingContext(_get_args())
-
-
 def main():
     """Main entry point."""
+    # Processing context initialization
+    ctx = _ProcessingContext(_get_args())
     # Create output directory if not exists
     if not os.path.isdir(ctx.outdir) :
         if ctx.verbose :
             if ctx.logdir:
-                logging.info('Create output directory: {0}'.format(ctx.outdir))
+                logging.warning('Create output directory: {0}'.format(ctx.outdir))
             else:
                 sys.stdout.write('Create output directory: {0}\n'.format(ctx.outdir))
         os.mkdir(ctx.outdir)
@@ -235,7 +239,7 @@ def main():
     # Start threads pool over files list in supplied directory
     pool = ThreadPool(int(ctx.cfg.defaults()['threads_number']))
     # Return the list of generated mapfiles in temporary directory 
-    outmaps = pool.map(_process, _get_files(ctx.directory))
+    outmaps = pool.map(_wrapper, izip(_get_files(ctx.directory), repeat(ctx)))
     pool.close()
     pool.join()
     if ctx.logdir:
@@ -248,7 +252,7 @@ def main():
     # Remove temporary directory
     if ctx.verbose:
         if ctx.logdir:
-            logging.info('Delete temporary directory {0}'.format(ctx.dtemp))
+            logging.warning('Delete temporary directory {0}'.format(ctx.dtemp))
         else:
             sys.stdout.write('Delete temporary directory {0}\n'.format(ctx.dtemp))
     rmtree(ctx.dtemp)

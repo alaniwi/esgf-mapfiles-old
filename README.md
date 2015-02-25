@@ -6,7 +6,7 @@ The publication process of ESG-F nodes requires mapfiles. Mapfiles are text file
 
 Security policies of computing centres that often host ESG-F data and datanodes, do not allow to easily use the ```esgscan_directory``` ESG-F command-line that is conventionally used to generate mapfiles. Moreover, this command becomes time consuming to checksums a lot of data.
 
-```esg_mapfiles.py``` is an flexible alternative Python command-line tool allowing you to easily generate mapfiles independently from ESG-F. This tool currently supports CMIP5 and CORDEX DRS.
+```esg_mapfiles.py``` is a flexible alternative Python command-line tool allowing you to easily generate mapfiles independently from ESG-F. This tool currently supports CMIP5 and CORDEX DRS.
 
 ## Features
 
@@ -45,7 +45,7 @@ threads_number = 4
 
 ## Dependencies
 
-```esg_mapfiles.py``` use the following basic Python libraries includes in Python 2.5+. Becareful your Python environment includes:
+```esg_mapfiles.py``` uses the following basic Python libraries includes in Python 2.5+. Becareful your Python environment includes:
 - os, sys, re, logging
 - argparse
 - ConfigParser
@@ -179,20 +179,18 @@ directory_format = /(?P<root>[\w./-]+)/(?P<project>[\w.-]+)/(?P<facet1>[\w.-]+)/
 ```
 
 
-##### FREQUENTLY ASKED QUESTION ################################################
+## Frequently asked questions
 
-
-##### DEVELOPPER/AUTHOR ########################################################
+## Developper/Author
 
 LEVAVASSEUR, G. (CNRS/IPSL)
 
-
-##### CONTACTS #################################################################
+## Contacts
 
 To submit bugs, suggestions or ideas: glipsl@ipsl.jussieu.fr or sdipsl@ipsl.jussieu.fr
 
-
-##### CHANGELOG ################################################################
+## Changlog
 
 2015-02-13 : Refactoring script with configuration file and using just a directory as input.
+
 2014-09-17 : MD5 checksum compute by OS (Unix Shell) because of out memory for big data files.
