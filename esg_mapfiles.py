@@ -58,7 +58,7 @@ def _get_args():
                         description="""Build ESG-F mapfiles upon local ESG-F datanode bypassing esgscan_directory\ncommand-line.""",
                         formatter_class = RawTextHelpFormatter,
                         add_help=False,
-                        epilog = "Developped by Levavasseur, G. (CNRS/IPSL)")
+                        epilog = "Developed by Levavasseur, G. (CNRS/IPSL)")
     parser.add_argument('directory',
                         type=str,
                         nargs = '?',
