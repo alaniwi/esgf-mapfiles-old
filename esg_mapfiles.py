@@ -34,6 +34,7 @@ class _ProcessingContext(object):
         # Else -> Log as supplied
         if self.logdir:
             _init_logger(self.logdir)
+        self.keep_going = args.keep_going
         self.verbose = args.verbose
         self.directory = os.path.normpath(args.directory)
         self.project = args.project
@@ -95,6 +96,10 @@ def _get_args():
                         action = 'store_true',
                         default = False,
                         help = """Verbose mode.\n\n""")
+    parser.add_argument('-k', '--keep-going',
+                        action = 'store_true',
+                        default = False,                       
+                        help = """Keep going if some files cannot be processed.\n\n""")
     parser.add_argument('-V', '--Version',
                         action = 'version',
                         version = "%(prog)s ({0})".format(__version__),
@@ -165,8 +170,16 @@ def _checksum(file, logdir):
 
 
 def _wrapper(args):
-    """Pool map pultiple arguments wrapper."""
+    """Pool map multiple arguments wrapper."""
     return _process(*args)
+    
+def _wrapper2(args):
+    """Like _wrapper, but returns None if exception encountered"""
+    try:
+        return _process(*args)
+    except:
+        print '\nWARNING: skipping %s because: %s\n' % (args[0], sys.exc_info()[1])
+        return None
 
 
 def _process(file, ctx): 
@@ -235,8 +248,13 @@ def main():
         print 'Scan started for {0}'.format(ctx.directory)
     # Start threads pool over files list in supplied directory
     pool = ThreadPool(int(ctx.cfg.defaults()['threads_number']))
-    # Return the list of generated mapfiles in temporary directory 
-    outmaps = pool.map(_wrapper, izip(_get_files(ctx.directory), repeat(ctx)))
+    # Return the list of generated mapfiles in temporary directory
+    args = izip(_get_files(ctx.directory), repeat(ctx))
+    if ctx.keep_going:
+        outmaps = filter(lambda m: m != None,
+                         pool.map(_wrapper2, args))
+    else:
+        outmaps = pool.map(_wrapper, args)
     pool.close()
     pool.join()
     if ctx.logdir:
